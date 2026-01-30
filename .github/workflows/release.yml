@@ -1,0 +1,242 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      source_ref:
+        description: 'Branch or tag to build from obsidian-web (e.g., main, v1.0.0)'
+        required: false
+        default: 'main'
+        type: string
+
+env:
+  SOURCE_REPO: femto/obsidian-web
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ inputs.source_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../server && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Rebuild native modules for Electron (${{ matrix.arch }})
+        run: cd server && npx electron-rebuild -f -w better-sqlite3 --arch=${{ matrix.arch }} -v 33.4.11
+
+      - name: Build Electron (${{ matrix.arch }})
+        run: npx electron-builder --mac --${{ matrix.arch }} --publish=never
+
+      - name: Upload Mac ${{ matrix.arch }} artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-mac-${{ matrix.arch }}
+          retention-days: 1
+          path: |
+            dist-electron/*.dmg
+            dist-electron/*.zip
+            dist-electron/*.blockmap
+            dist-electron/*.yml
+            dist-electron/*.yaml
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ inputs.source_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../server && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Rebuild native modules for Electron
+        run: cd server && npx electron-rebuild -f -w better-sqlite3 -v 33.4.11
+
+      - name: Build Electron
+        run: npx electron-builder --win --publish=never
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          retention-days: 1
+          path: |
+            dist-electron/*.exe
+            dist-electron/*.blockmap
+            dist-electron/*.yml
+            dist-electron/*.yaml
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ inputs.source_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../server && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Rebuild native modules for Electron
+        run: cd server && npx electron-rebuild -f -w better-sqlite3 -v 33.4.11
+
+      - name: Build Electron
+        run: npx electron-builder --linux --publish=never
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          retention-days: 1
+          path: |
+            dist-electron/*.AppImage
+            dist-electron/*.deb
+            dist-electron/*.blockmap
+            dist-electron/*.yml
+            dist-electron/*.yaml
+
+  release:
+    needs: [build-mac, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | head -100
+
+      - name: Merge Mac latest-mac.yml files
+        run: |
+          # Install yq for YAML manipulation
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+          # Find the yml files from both architectures
+          ARM64_YML=$(find artifacts/release-mac-arm64 -name "latest-mac.yml" | head -1)
+          X64_YML=$(find artifacts/release-mac-x64 -name "latest-mac.yml" | head -1)
+
+          echo "ARM64 yml: $ARM64_YML"
+          echo "X64 yml: $X64_YML"
+
+          if [ -f "$ARM64_YML" ] && [ -f "$X64_YML" ]; then
+            # Get files array from both
+            ARM64_FILES=$(yq '.files' "$ARM64_YML")
+            X64_FILES=$(yq '.files' "$X64_YML")
+
+            # Create merged yml using x64 as base (for compatibility with older Macs)
+            cp "$X64_YML" artifacts/latest-mac.yml
+
+            # Merge files arrays
+            yq -i ".files = $(yq -o=json '.files' "$X64_YML") + $(yq -o=json '.files' "$ARM64_YML")" artifacts/latest-mac.yml
+
+            echo "Created merged latest-mac.yml:"
+            cat artifacts/latest-mac.yml
+          elif [ -f "$ARM64_YML" ]; then
+            cp "$ARM64_YML" artifacts/latest-mac.yml
+          elif [ -f "$X64_YML" ]; then
+            cp "$X64_YML" artifacts/latest-mac.yml
+          fi
+
+          # Copy Windows and Linux yml files
+          find artifacts/release-windows -name "latest.yml" -exec cp {} artifacts/ \; 2>/dev/null || true
+          find artifacts/release-linux -name "latest-linux.yml" -exec cp {} artifacts/ \; 2>/dev/null || true
+
+          echo "=== All yml files ==="
+          ls -la artifacts/*.yml 2>/dev/null || echo "No yml files found"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          body: |
+            ## Minion Mind v${{ inputs.version }}
+
+            ### Downloads
+            | Platform | Architecture | File |
+            |----------|--------------|------|
+            | macOS | Intel (x64) | `Minion Mind-*.dmg` |
+            | macOS | Apple Silicon (arm64) | `Minion Mind-*-arm64.dmg` |
+            | Windows | x64 | `Minion Mind-*-setup.exe` |
+            | Linux | x64 | `Minion Mind-*.AppImage` |
+
+            ### Auto-Update
+            Auto-update is supported. The app will automatically check for updates on startup.
+
+            ### Installation
+            See [README](https://github.com/femto/minion-mind-releases#installation) for instructions.
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.zip
+            artifacts/**/*.blockmap
+            artifacts/latest-mac.yml
+            artifacts/latest.yml
+            artifacts/latest-linux.yml
+          draft: false
+          prerelease: false
+
+      - name: Delete artifacts after release
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            release-mac-arm64
+            release-mac-x64
+            release-windows
+            release-linux
