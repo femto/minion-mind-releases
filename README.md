@@ -46,6 +46,10 @@ Download the latest version from the [Releases](https://github.com/femto/minion-
 
 **方法3：移除隔离属性（终端命令）**
 ```bash
+# 方式A
+xattr -d com.apple.quarantine "/Applications/Minion Mind.app"
+
+# 方式B（如果上面不行）
 xattr -cr "/Applications/Minion Mind.app"
 ```
 
