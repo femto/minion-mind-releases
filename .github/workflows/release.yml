@@ -48,6 +48,9 @@ jobs:
           cd frontend && npm ci
           cd ../server && npm ci
 
+      - name: Sync agent-client plugin
+        run: npm run sync:agent-client
+
       - name: Build frontend
         run: cd frontend && npm run build
 
@@ -91,6 +94,9 @@ jobs:
           cd frontend && npm ci
           cd ../server && npm ci
 
+      - name: Sync agent-client plugin
+        run: npm run sync:agent-client
+
       - name: Build frontend
         run: cd frontend && npm run build
 
@@ -132,6 +138,9 @@ jobs:
           npm ci
           cd frontend && npm ci
           cd ../server && npm ci
+
+      - name: Sync agent-client plugin
+        run: npm run sync:agent-client
 
       - name: Build frontend
         run: cd frontend && npm run build
