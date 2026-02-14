@@ -17,7 +17,7 @@ on:
         type: string
 
 env:
-  SOURCE_REPO: femto/obsidian-web
+  SOURCE_REPO: femto/minion-mind
   # For tag push: use tag name; for workflow_dispatch: use input or default to tag
   VERSION: ${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}
   SOURCE_REF: ${{ github.event_name == 'push' && github.ref_name || inputs.source_ref || 'main' }}
