@@ -1,0 +1,81 @@
+name: Update Homebrew Tap
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to sync (e.g., v0.2.63). Leave empty to use latest.'
+        required: false
+        type: string
+
+env:
+  RELEASE_REPO: femto/minion-mind-releases
+  TAP_REPO: femto/homebrew-tap
+
+jobs:
+  update-tap:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            latest=$(gh release view -R "$RELEASE_REPO" --json tagName -q .tagName)
+            echo "tag=$latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TAP_REPO }}
+          token: ${{ secrets.SOURCE_REPO_TOKEN }}
+          path: tap
+
+      - name: Update cask
+        run: |
+          set -euo pipefail
+          cd tap
+          tag="${{ steps.tag.outputs.tag }}"
+          version="${tag#v}"
+
+          tmpdir=$(mktemp -d)
+          gh release download "$tag" -R "$RELEASE_REPO" \
+            -p "Minion-Mind-${version}-arm64-mac.dmg" \
+            -p "Minion-Mind-${version}-x64-mac.dmg" \
+            -D "$tmpdir"
+
+          sha_arm=$(shasum -a 256 "$tmpdir/Minion-Mind-${version}-arm64-mac.dmg" | awk '{print $1}')
+          sha_x64=$(shasum -a 256 "$tmpdir/Minion-Mind-${version}-x64-mac.dmg" | awk '{print $1}')
+
+          python3 - <<PY
+          from pathlib import Path
+          p = Path("Casks/minion-mind.rb")
+          s = p.read_text().splitlines()
+          out = []
+          for line in s:
+              if line.strip().startswith("version "):
+                  out.append(f'  version "{version}"')
+              elif line.strip().startswith("sha256 arm:"):
+                  out.append(f'  sha256 arm: "{sha_arm}",')
+              elif line.strip().startswith("intel:"):
+                  out.append(f'         intel: "{sha_x64}"')
+              else:
+                  out.append(line)
+          p.write_text("\\n".join(out) + "\\n")
+          PY
+
+      - name: Commit and push
+        run: |
+          cd tap
+          tag="${{ steps.tag.outputs.tag }}"
+          version="${tag#v}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add Casks/minion-mind.rb
+          git commit -m "Bump minion-mind cask to ${version}" || exit 0
+          git push
