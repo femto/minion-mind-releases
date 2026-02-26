@@ -27,6 +27,26 @@ Download the latest version from the [Releases](https://github.com/femto/minion-
 
 ### macOS
 
+#### Homebrew (recommended)
+
+```bash
+brew install --cask femto/tap/minion-mind
+```
+
+Optional: install into user Applications folder.
+
+```bash
+brew install --cask --appdir=~/Applications femto/tap/minion-mind
+```
+
+If macOS still blocks launch due to quarantine, you can use:
+
+```bash
+brew install --cask --no-quarantine femto/tap/minion-mind
+```
+
+#### DMG
+
 1. Download the `.dmg` file
 2. Open and drag to Applications folder
 3. If macOS shows "damaged" or "unidentified developer" warning, run in Terminal:
