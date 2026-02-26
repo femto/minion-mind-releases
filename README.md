@@ -27,7 +27,7 @@ Download the latest version from the [Releases](https://github.com/femto/minion-
 
 ### macOS
 
-#### Homebrew (recommended)
+#### Install via Homebrew (recommended)
 
 ```bash
 brew install --cask femto/tap/minion-mind
@@ -55,7 +55,7 @@ rm -rf /Applications/Minion\ Mind.app
 brew install --cask femto/tap/minion-mind
 ```
 
-#### DMG
+#### Install via DMG
 
 1. Download the `.dmg` file
 2. Open and drag to Applications folder

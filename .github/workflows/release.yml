@@ -233,7 +233,7 @@ jobs:
             ### Downloads
             | Platform | Architecture | File |
             |----------|--------------|------|
-            | macOS | Intel (x64) | `Minion Mind-*.dmg` |
+            | macOS | Intel (x64) | `Minion Mind-*-x64.dmg` |
             | macOS | Apple Silicon (arm64) | `Minion Mind-*-arm64.dmg` |
             | Windows | x64 | `Minion Mind-*-setup.exe` |
             | Linux | x64 | `Minion Mind-*.AppImage` |
