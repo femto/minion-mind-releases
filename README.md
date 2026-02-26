@@ -29,28 +29,11 @@ Download the latest version from the [Releases](https://github.com/femto/minion-
 
 1. Download the `.dmg` file
 2. Open and drag to Applications folder
-3. **首次启动需要绕过 Gatekeeper 安全检查**（应用未签名）
-
-#### 如果提示"已损坏，无法打开"
-
-**方法1：右键打开（推荐）**
-- 在 Finder 中找到 `Minion Mind.app`
-- 按住 Control 点击（或右键点击）应用
-- 选择「打开」
-- 在弹出的对话框中点击「打开」
-
-**方法2：系统设置中允许**
-- 打开「系统设置」>「隐私与安全性」
-- 找到被阻止的 Minion Mind 提示
-- 点击「仍要打开」
-
-**方法3：移除隔离属性（终端命令）**
+3. If macOS shows "damaged" or "unidentified developer" warning, run in Terminal:
 ```bash
-# 方式A
 xattr -d com.apple.quarantine "/Applications/Minion Mind.app"
-
-# 方式B（如果上面不行）
-xattr -cr "/Applications/Minion Mind.app"
+# Or if the above doesn't work:
+xattr -c "/Applications/Minion Mind.app"
 ```
 
 ### Windows
