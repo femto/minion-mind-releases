@@ -18,9 +18,6 @@ on:
 
 env:
   SOURCE_REPO: femto/minion-mind
-  # For tag push: use tag name; for workflow_dispatch: use input or default to tag
-  VERSION: ${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}
-  SOURCE_REF: ${{ github.event_name == 'push' && github.ref_name || inputs.source_ref || 'main' }}
 
 jobs:
   build-mac:
@@ -29,6 +26,18 @@ jobs:
       matrix:
         arch: [arm64, x64]
     steps:
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+            echo "SOURCE_REF=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=v${{ inputs.version }}" >> "$GITHUB_ENV"
+            src="${{ inputs.source_ref }}"
+            if [ -z "$src" ]; then src="main"; fi
+            echo "SOURCE_REF=$src" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -77,6 +86,18 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+            echo "SOURCE_REF=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=v${{ inputs.version }}" >> "$GITHUB_ENV"
+            src="${{ inputs.source_ref }}"
+            if [ -z "$src" ]; then src="main"; fi
+            echo "SOURCE_REF=$src" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -124,6 +145,18 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+            echo "SOURCE_REF=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=v${{ inputs.version }}" >> "$GITHUB_ENV"
+            src="${{ inputs.source_ref }}"
+            if [ -z "$src" ]; then src="main"; fi
+            echo "SOURCE_REF=$src" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -175,6 +208,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=v${{ inputs.version }}" >> "$GITHUB_ENV"
+          fi
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -271,8 +312,15 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
       RELEASE_REPO: femto/minion-mind-releases
-      VERSION: ${{ env.VERSION }}
     steps:
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=v${{ inputs.version }}" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout tap repo
         uses: actions/checkout@v4
         with:
