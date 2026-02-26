@@ -264,3 +264,60 @@ jobs:
             release-mac-x64
             release-windows
             release-linux
+
+  update-homebrew-tap:
+    needs: [release]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
+      RELEASE_REPO: femto/minion-mind-releases
+      VERSION: ${{ env.VERSION }}
+    steps:
+      - name: Checkout tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: femto/homebrew-tap
+          token: ${{ secrets.SOURCE_REPO_TOKEN }}
+          path: tap
+
+      - name: Update cask
+        run: |
+          set -euo pipefail
+          cd tap
+          tag="$VERSION"
+          version="${tag#v}"
+
+          tmpdir=$(mktemp -d)
+          gh release download "$tag" -R "$RELEASE_REPO" \
+            -p "Minion-Mind-${version}-arm64-mac.dmg" \
+            -p "Minion-Mind-${version}-x64-mac.dmg" \
+            -D "$tmpdir"
+
+          sha_arm=$(shasum -a 256 "$tmpdir/Minion-Mind-${version}-arm64-mac.dmg" | awk '{print $1}')
+          sha_x64=$(shasum -a 256 "$tmpdir/Minion-Mind-${version}-x64-mac.dmg" | awk '{print $1}')
+
+          python3 - <<PY
+          from pathlib import Path
+          p = Path("Casks/minion-mind.rb")
+          s = p.read_text().splitlines()
+          out = []
+          for line in s:
+              if line.strip().startswith("version "):
+                  out.append(f'  version "{version}"')
+              elif line.strip().startswith("sha256 arm:"):
+                  out.append(f'  sha256 arm: "{sha_arm}",')
+              elif line.strip().startswith("intel:"):
+                  out.append(f'         intel: "{sha_x64}"')
+              else:
+                  out.append(line)
+          p.write_text("\\n".join(out) + "\\n")
+          PY
+
+      - name: Commit and push
+        run: |
+          cd tap
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add Casks/minion-mind.rb
+          git commit -m "Bump minion-mind cask to ${VERSION#v}" || exit 0
+          git push
