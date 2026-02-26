@@ -54,6 +54,9 @@ jobs:
 
           python3 - <<PY
           from pathlib import Path
+          version = "${version}"
+          sha_arm = "${sha_arm}"
+          sha_x64 = "${sha_x64}"
           p = Path("Casks/minion-mind.rb")
           s = p.read_text().splitlines()
           out = []
