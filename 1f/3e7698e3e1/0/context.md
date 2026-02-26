@@ -1,0 +1,17 @@
+# Session Context
+
+## User Prompts
+
+### Prompt 1
+
+# 方式A
+xattr -d com.apple.quarantine "/Applications/Minion Mind.app"
+
+# 方式B（如果上面不行）
+xattr -cr "/Applications/Minion Mind.app" 这个readme改成2行，而且xattr -cr "/Applications/Minion Mind.app"用 -c就行了，有些不支持-r
+然后readme改成英文的
+
+### Prompt 2
+
+push.
+
