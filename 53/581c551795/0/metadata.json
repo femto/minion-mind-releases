@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "53581c551795",
+  "session_id": "ac57699e-45eb-45a3-81fc-cf3395b09931",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-26T06:26:44.516625Z",
+  "branch": "main",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "README.md",
+    ".github/workflows/release.yml"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "b1185a67bee4",
+  "token_usage": {
+    "input_tokens": 490,
+    "cache_creation_tokens": 51884,
+    "cache_read_tokens": 31359,
+    "output_tokens": 420,
+    "api_call_count": 3
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-26T06:26:44.473746Z",
+    "agent_lines": 3,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 3,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-Users-femtozheng-python-project-minion-mind-releases/ac57699e-45eb-45a3-81fc-cf3395b09931.jsonl"
+}
