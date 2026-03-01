@@ -389,8 +389,17 @@ jobs:
           sha_arm=$(shasum -a 256 "$tmpdir/Minion-Mind-${version}-arm64-mac.dmg" | awk '{print $1}')
           sha_x64=$(shasum -a 256 "$tmpdir/Minion-Mind-${version}-x64-mac.dmg" | awk '{print $1}')
 
-          python3 - <<PY
+          # Export variables for Python
+          export VERSION_NUM="$version"
+          export SHA_ARM="$sha_arm"
+          export SHA_X64="$sha_x64"
+
+          python3 - <<'PY'
+          import os
           from pathlib import Path
+          version = os.environ['VERSION_NUM']
+          sha_arm = os.environ['SHA_ARM']
+          sha_x64 = os.environ['SHA_X64']
           p = Path("Casks/minion-mind.rb")
           s = p.read_text().splitlines()
           out = []
@@ -403,7 +412,7 @@ jobs:
                   out.append(f'         intel: "{sha_x64}"')
               else:
                   out.append(line)
-          p.write_text("\\n".join(out) + "\\n")
+          p.write_text("\n".join(out) + "\n")
           PY
 
       - name: Commit and push
