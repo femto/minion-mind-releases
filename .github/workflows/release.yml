@@ -258,9 +258,53 @@ jobs:
             cp "$X64_YML" artifacts/latest-mac.yml
           fi
 
-          # Copy Windows and Linux yml files
-          find artifacts/release-windows -name "latest.yml" -exec cp {} artifacts/ \; 2>/dev/null || true
+          # Copy Linux yml file (usually correct)
           find artifacts/release-linux -name "latest-linux.yml" -exec cp {} artifacts/ \; 2>/dev/null || true
+
+          # Regenerate Windows latest.yml with correct SHA512 checksums
+          # This fixes checksum mismatches caused by non-deterministic builds
+          echo "=== Regenerating Windows latest.yml with actual checksums ==="
+          VERSION_NUM="${VERSION#v}"
+          RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+
+          # Find Windows exe files and compute their SHA512
+          cat > artifacts/latest.yml << EOF
+version: ${VERSION_NUM}
+files:
+EOF
+
+          # Process each Windows exe file
+          for exe in artifacts/release-windows/*.exe; do
+            if [ -f "$exe" ]; then
+              filename=$(basename "$exe")
+              size=$(stat -c%s "$exe" 2>/dev/null || stat -f%z "$exe")
+              sha512=$(sha512sum "$exe" 2>/dev/null | cut -d' ' -f1 || shasum -a 512 "$exe" | cut -d' ' -f1)
+              sha512_base64=$(echo "$sha512" | xxd -r -p | base64 | tr -d '\n')
+
+              echo "  - url: ${filename}" >> artifacts/latest.yml
+              echo "    sha512: ${sha512_base64}" >> artifacts/latest.yml
+              echo "    size: ${size}" >> artifacts/latest.yml
+
+              echo "Processed: ${filename} (${size} bytes)"
+            fi
+          done
+
+          # Find the main installer (largest or first exe) for path field
+          MAIN_EXE=$(find artifacts/release-windows -name "*.exe" -type f -printf '%s %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2 || find artifacts/release-windows -name "*.exe" -type f | head -1)
+          if [ -n "$MAIN_EXE" ]; then
+            MAIN_FILENAME=$(basename "$MAIN_EXE")
+            MAIN_SHA512=$(sha512sum "$MAIN_EXE" 2>/dev/null | cut -d' ' -f1 || shasum -a 512 "$MAIN_EXE" | cut -d' ' -f1)
+            MAIN_SHA512_BASE64=$(echo "$MAIN_SHA512" | xxd -r -p | base64 | tr -d '\n')
+
+            cat >> artifacts/latest.yml << EOF
+path: ${MAIN_FILENAME}
+sha512: ${MAIN_SHA512_BASE64}
+releaseDate: '${RELEASE_DATE}'
+EOF
+          fi
+
+          echo "=== Generated latest.yml ==="
+          cat artifacts/latest.yml
 
           echo "=== All yml files ==="
           ls -la artifacts/*.yml 2>/dev/null || echo "No yml files found"
