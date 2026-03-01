@@ -270,11 +270,9 @@ jobs:
           VERSION_NUM="${VERSION#v}"
           RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
 
-          # Find Windows exe files and compute their SHA512
-          cat > artifacts/latest.yml << EOF
-version: ${VERSION_NUM}
-files:
-EOF
+          # Initialize latest.yml
+          echo "version: ${VERSION_NUM}" > artifacts/latest.yml
+          echo "files:" >> artifacts/latest.yml
 
           # Process each Windows exe file
           for exe in artifacts/release-windows/*.exe; do
@@ -299,11 +297,9 @@ EOF
             MAIN_SHA512=$(sha512sum "$MAIN_EXE" 2>/dev/null | cut -d' ' -f1 || shasum -a 512 "$MAIN_EXE" | cut -d' ' -f1)
             MAIN_SHA512_BASE64=$(echo "$MAIN_SHA512" | xxd -r -p | base64 | tr -d '\n')
 
-            cat >> artifacts/latest.yml << EOF
-path: ${MAIN_FILENAME}
-sha512: ${MAIN_SHA512_BASE64}
-releaseDate: '${RELEASE_DATE}'
-EOF
+            echo "path: ${MAIN_FILENAME}" >> artifacts/latest.yml
+            echo "sha512: ${MAIN_SHA512_BASE64}" >> artifacts/latest.yml
+            echo "releaseDate: '${RELEASE_DATE}'" >> artifacts/latest.yml
           fi
 
           echo "=== Generated latest.yml ==="
