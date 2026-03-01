@@ -87,6 +87,9 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Resolve version
         run: |
