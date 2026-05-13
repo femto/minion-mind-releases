@@ -46,13 +46,10 @@ brew install --cask --no-quarantine femto/tap/minion-mind
 ```
 
 If you already installed via DMG, Homebrew may report an existing app at `/Applications/Minion Mind.app`.
-You can either force-install or delete the existing app:
+Force-install to overwrite it:
 
 ```bash
 brew install --cask --force femto/tap/minion-mind
-# or
-rm -rf /Applications/Minion\ Mind.app
-brew install --cask femto/tap/minion-mind
 ```
 
 #### Install via DMG
