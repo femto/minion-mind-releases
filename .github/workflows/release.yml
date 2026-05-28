@@ -274,8 +274,16 @@ jobs:
           echo "version: ${VERSION_NUM}" > artifacts/latest.yml
           echo "files:" >> artifacts/latest.yml
 
-          # Process each Windows exe file
-          for exe in artifacts/release-windows/*.exe; do
+          # Process only the Windows NSIS installer. Portable builds are
+          # self-extracting executables and must not be used for auto-update.
+          mapfile -t WINDOWS_INSTALLERS < <(find artifacts/release-windows -name "*Setup*.exe" -type f | sort)
+          if [ "${#WINDOWS_INSTALLERS[@]}" -eq 0 ]; then
+            echo "No Windows Setup installer found"
+            find artifacts/release-windows -name "*.exe" -type f -print
+            exit 1
+          fi
+
+          for exe in "${WINDOWS_INSTALLERS[@]}"; do
             if [ -f "$exe" ]; then
               filename=$(basename "$exe")
               size=$(stat -c%s "$exe" 2>/dev/null || stat -f%z "$exe")
@@ -290,8 +298,8 @@ jobs:
             fi
           done
 
-          # Find the main installer (largest or first exe) for path field
-          MAIN_EXE=$(find artifacts/release-windows -name "*.exe" -type f -printf '%s %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2 || find artifacts/release-windows -name "*.exe" -type f | head -1)
+          # Use the NSIS installer for electron-updater.
+          MAIN_EXE="${WINDOWS_INSTALLERS[0]}"
           if [ -n "$MAIN_EXE" ]; then
             MAIN_FILENAME=$(basename "$MAIN_EXE")
             MAIN_SHA512=$(sha512sum "$MAIN_EXE" 2>/dev/null | cut -d' ' -f1 || shasum -a 512 "$MAIN_EXE" | cut -d' ' -f1)
@@ -321,7 +329,8 @@ jobs:
             |----------|--------------|------|
             | macOS | Intel (x64) | `Minion Mind-*-x64.dmg` |
             | macOS | Apple Silicon (arm64) | `Minion Mind-*-arm64.dmg` |
-            | Windows | x64 | `Minion Mind-*-setup.exe` |
+            | Windows | x64/arm64 | `Minion-Mind-*-Setup.exe` |
+            | Windows | Portable x64 | `Minion-Mind-*-x64-Portable.exe` |
             | Linux | x64 | `Minion Mind-*.AppImage` |
 
             ### Auto-Update
