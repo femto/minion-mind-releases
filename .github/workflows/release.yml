@@ -261,8 +261,19 @@ jobs:
             cp "$X64_YML" artifacts/latest-mac.yml
           fi
 
-          # Copy Linux yml file (usually correct)
-          find artifacts/release-linux -name "latest-linux.yml" -exec cp {} artifacts/ \; 2>/dev/null || true
+          # Copy updater metadata for every Linux architecture. electron-updater
+          # requests latest-linux.yml on x64 and latest-linux-arm64.yml on arm64.
+          find artifacts/release-linux -name "latest-linux*.yml" -exec cp {} artifacts/ \; 2>/dev/null || true
+
+          # Do not publish an arm64 AppImage without the channel metadata that
+          # lets installed arm64 builds discover it.
+          if find artifacts/release-linux -name "*-arm64.AppImage" -type f | grep -q .; then
+            if [ ! -f artifacts/latest-linux-arm64.yml ]; then
+              echo "Missing latest-linux-arm64.yml for the arm64 AppImage"
+              find artifacts/release-linux -maxdepth 2 -type f -print
+              exit 1
+            fi
+          fi
 
           # Regenerate Windows latest.yml with correct SHA512 checksums
           # This fixes checksum mismatches caused by non-deterministic builds
@@ -331,7 +342,8 @@ jobs:
             | macOS | Apple Silicon (arm64) | `Minion Mind-*-arm64.dmg` |
             | Windows | x64/arm64 | `Minion-Mind-*-Setup.exe` |
             | Windows | Portable x64 | `Minion-Mind-*-x64-Portable.exe` |
-            | Linux | x64 | `Minion Mind-*.AppImage` |
+            | Linux | x64 | `Minion-Mind-*-x86_64.AppImage` |
+            | Linux | arm64 | `Minion-Mind-*-arm64.AppImage` |
 
             ### Auto-Update
             Auto-update is supported. The app will automatically check for updates on startup.
@@ -347,7 +359,7 @@ jobs:
             artifacts/**/*.blockmap
             artifacts/latest-mac.yml
             artifacts/latest.yml
-            artifacts/latest-linux.yml
+            artifacts/latest-linux*.yml
           draft: false
           prerelease: false
 
