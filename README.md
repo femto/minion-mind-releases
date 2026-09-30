@@ -2,6 +2,8 @@
 
 A web-based knowledge management application fully compatible with Obsidian vault format.
 
+![Minion Mind app screenshot](./screenshot/app-screenshot.png)
+
 ## Download
 
 Download the latest version from the [Releases](https://github.com/femto/minion-mind-releases/releases) page.
